@@ -19,7 +19,7 @@ pub fn all_sources() -> Vec<SourceDef> {
             tier: 1,
             scrape_method: "rss",
             is_paywalled: false,
-            enabled: false, // feed parse error, non-standard format
+            enabled: true,
         },
         SourceDef {
             name: "The New Yorker",
@@ -435,7 +435,7 @@ pub fn all_sources() -> Vec<SourceDef> {
             tier: 3,
             scrape_method: "rss",
             is_paywalled: false,
-            enabled: true,
+            enabled: false, // economics/politics, not art
         },
         SourceDef {
             name: "CARLA",
