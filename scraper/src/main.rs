@@ -2,6 +2,7 @@ mod db;
 mod dedup;
 mod extract;
 mod feeds;
+mod images;
 mod quality;
 mod score;
 mod sources;
@@ -104,6 +105,9 @@ fn cmd_scan(conn: &rusqlite::Connection) -> Result<()> {
                     if quality::is_non_article_title(&entry.title) {
                         continue;
                     }
+                    if !quality::passes_art_relevance(&entry.title, &src.name) {
+                        continue;
+                    }
                     if entry.published_at.is_some() && quality::is_too_old(entry.published_at.as_deref()) {
                         continue;
                     }
@@ -150,14 +154,27 @@ fn cmd_promote(conn: &rusqlite::Connection) -> Result<()> {
     let candidates = db::get_promotable_candidates(conn, 40)?;
     eprintln!("Found {} candidates to promote (score >= 40)", candidates.len());
 
-    // Diversity: track per-source counts, max 3 per source
-    let mut source_counts: std::collections::HashMap<String, u32> = std::collections::HashMap::new();
+    // Diversity: max 1 article per source per promotion run
+    // Walk sorted-by-score candidates, take first unseen source, target 8-15 articles
+    let mut seen_sources: std::collections::HashSet<String> = std::collections::HashSet::new();
     let mut promoted = 0u32;
+    let max_promote = 15u32;
+
+    let data_dir = {
+        let mut p = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        p.push("../data");
+        p
+    };
 
     for cand in &candidates {
-        let count = source_counts.get(&cand.source).copied().unwrap_or(0);
-        if count >= 3 {
-            eprintln!("  [SKIP] {} — max 3 from {}", cand.title, cand.source);
+        if promoted >= max_promote {
+            eprintln!("  [STOP] reached {} articles, stopping", max_promote);
+            break;
+        }
+
+        // Max 1 per source
+        if seen_sources.contains(&cand.source) {
+            eprintln!("  [SKIP] {} — already have 1 from {}", cand.title, cand.source);
             continue;
         }
 
@@ -173,9 +190,26 @@ fn cmd_promote(conn: &rusqlite::Connection) -> Result<()> {
                     continue;
                 }
                 match db::insert_article(conn, &cand, &article) {
-                    Ok(_) => {
+                    Ok(article_id) => {
                         db::mark_promoted(conn, cand.id)?;
-                        *source_counts.entry(cand.source.clone()).or_insert(0) += 1;
+
+                        // Process images from extracted HTML
+                        let img_urls = images::find_image_urls(&article.content_html);
+                        for (pos, img_url) in img_urls.iter().enumerate() {
+                            match images::download_and_process(img_url, &article_id, pos, &data_dir) {
+                                Some((ascii, bw_path)) => {
+                                    let _ = db::insert_article_image(
+                                        conn, &article_id, img_url, &ascii, &bw_path, "", pos as i32,
+                                    );
+                                    eprintln!("    [IMG] processed image {}", pos);
+                                }
+                                None => {
+                                    eprintln!("    [IMG] failed to process {}", img_url);
+                                }
+                            }
+                        }
+
+                        seen_sources.insert(cand.source.clone());
                         promoted += 1;
                         eprintln!("    {} words", article.word_count);
                     }
@@ -198,7 +232,7 @@ fn cmd_promote(conn: &rusqlite::Connection) -> Result<()> {
         eprintln!("Auto-archived {} articles older than 7 days", archived);
     }
 
-    eprintln!("Promoted {} articles", promoted);
+    eprintln!("Promoted {} articles (from {} unique sources)", promoted, seen_sources.len());
     Ok(())
 }
 

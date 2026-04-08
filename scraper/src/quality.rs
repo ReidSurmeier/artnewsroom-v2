@@ -75,3 +75,58 @@ pub fn is_mostly_boilerplate(html: &str) -> bool {
     let ratio = estimated_boilerplate_chars as f64 / total_len as f64;
     ratio > 0.5
 }
+
+/// Art-related keywords for relevance gating
+const ART_KEYWORDS: &[&str] = &[
+    "art", "artist", "painting", "sculpture", "gallery", "museum",
+    "exhibition", "curator", "curation", "contemporary", "installation",
+    "photography", "film", "cinema", "architecture", "design", "aesthetic",
+    "creative", "studio", "printmaking", "lithograph", "woodblock",
+    "etching", "drawing", "visual", "culture", "critical", "theory",
+    "essay", "zine", "publishing", "editorial", "archive", "collection",
+    "biennale", "biennial", "retrospective", "monograph",
+];
+
+/// Non-art sources that need strict keyword gating
+const NON_ART_SOURCES: &[&str] = &[
+    "Hacker News",
+    "Noahpinion",
+    "The Intrinsic Perspective",
+    "Henrik Karlsson",
+    "Personal Canon",
+    "Asterisk",
+    "Yale Review",
+    "Harper's Magazine",
+    "The Drift",
+    "n+1",
+];
+
+/// Check if a source is an art publication (tier 1-3 art-focused)
+fn is_art_publication(source_name: &str) -> bool {
+    !NON_ART_SOURCES.iter().any(|s| source_name == *s)
+}
+
+/// Count art-related keywords in text
+fn count_art_keywords(text: &str) -> usize {
+    let lower = text.to_lowercase();
+    ART_KEYWORDS
+        .iter()
+        .filter(|kw| {
+            // Word boundary check: keyword must appear as standalone word or prefix
+            lower.split(|c: char| !c.is_alphanumeric()).any(|word| word == **kw)
+        })
+        .count()
+}
+
+/// Check if article passes art relevance filter.
+/// Returns true if article should be KEPT.
+pub fn passes_art_relevance(title: &str, source_name: &str) -> bool {
+    // Art publications get a pass — their content is inherently art-related
+    if is_art_publication(source_name) {
+        return true;
+    }
+
+    // Non-art sources need at least 2 art keywords in the title
+    let kw_count = count_art_keywords(title);
+    kw_count >= 2
+}

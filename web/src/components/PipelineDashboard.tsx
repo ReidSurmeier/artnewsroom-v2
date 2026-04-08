@@ -38,12 +38,9 @@ interface Props {
 }
 
 function AnimatedDot({ offset }: { offset: number }) {
-  const pos = ((offset % 100) / 100) * 100;
+  const pos = (offset % 100);
   return (
-    <span
-      className="hp-dot"
-      style={{ left: `${pos}%` }}
-    >
+    <span className="hp-dot" style={{ left: `${pos}%` }}>
       &middot;
     </span>
   );
@@ -58,6 +55,7 @@ function Track({ label, frame }: { label: string; frame: number }) {
         <AnimatedDot offset={(frame * 7 + 33) % 100} />
         <AnimatedDot offset={(frame * 7 + 66) % 100} />
       </div>
+      <span className="hp-track-arrow">&rarr;</span>
     </div>
   );
 }
@@ -68,7 +66,12 @@ export default function PipelineDashboard({ onOpenAbout }: Props) {
   const [articles, setArticles] = useState<ArticleRow[]>([]);
   const [frame, setFrame] = useState(0);
   const [activeSourceIdx, setActiveSourceIdx] = useState(0);
-  const [scoreFrame, setScoreFrame] = useState({ domain: 0, keyword: 0, source: 0, recency: 0, total: 0, pass: false });
+  const [scoreFrame, setScoreFrame] = useState({
+    domain: 0,
+    keyword: 0,
+    source: 0,
+    recency: 0,
+  });
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -79,20 +82,13 @@ export default function PipelineDashboard({ onOpenAbout }: Props) {
 
   useEffect(() => {
     intervalRef.current = setInterval(() => {
-      setFrame(f => {
-        const next = f + 1;
-        // Cycle active source
-        setActiveSourceIdx(idx => (sources.length > 0 ? (idx + 1) % sources.length : 0));
-        // Animate score breakdown
-        setScoreFrame({
-          domain: Math.floor(Math.random() * 30),
-          keyword: Math.floor(Math.random() * 40),
-          source: Math.floor(Math.random() * 15) + 5,
-          recency: Math.floor(Math.random() * 15),
-          total: 0,
-          pass: false,
-        });
-        return next;
+      setFrame(f => f + 1);
+      setActiveSourceIdx(idx => (sources.length > 0 ? (idx + 1) % sources.length : 0));
+      setScoreFrame({
+        domain: Math.floor(Math.random() * 30),
+        keyword: Math.floor(Math.random() * 40),
+        source: Math.floor(Math.random() * 20),
+        recency: Math.floor(Math.random() * 10),
       });
     }, 500);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
@@ -104,6 +100,7 @@ export default function PipelineDashboard({ onOpenAbout }: Props) {
   const tier1 = sources.filter(s => s.tier === 1);
   const tier2 = sources.filter(s => s.tier === 2);
   const tier3 = sources.filter(s => s.tier === 3);
+  const tier4 = sources.filter(s => s.tier === 4);
   const activeSource = sources[activeSourceIdx];
 
   const gearFrames = ['/', '-', '\\', '|'];
@@ -118,37 +115,66 @@ export default function PipelineDashboard({ onOpenAbout }: Props) {
 
   const recentArticles = articles.slice(0, 8);
 
+  // Score bar helper: renders a simple ASCII bar
+  const scoreBar = (val: number, max: number) => {
+    const filled = Math.round((val / max) * 10);
+    return '[' + '#'.repeat(filled) + '-'.repeat(10 - filled) + ']';
+  };
+
   return (
     <div className="hp-flow">
       <div className="hp-flow-row">
         {/* SOURCES BOX */}
         <div className="hp-box">
           <div className="hp-box-title">SOURCES</div>
-          <div className="hp-box-content">
+          <div className="hp-box-content hp-scroll">
+            {tier1.length > 0 && (
+              <>
+                <div className="hp-line"><span className="hp-dim">T1 ({tier1.length})</span></div>
+                {tier1.map(s => (
+                  <div key={s.id} className="hp-line" style={{ paddingLeft: '8px' }}>
+                    {s.name === activeSource?.name ? '>' : ' '} {s.name}
+                    {s.fetch_count > 0 && <span className="hp-dim"> [{s.fetch_count}]</span>}
+                  </div>
+                ))}
+                <div className="hp-separator" />
+              </>
+            )}
+            {tier2.length > 0 && (
+              <>
+                <div className="hp-line"><span className="hp-dim">T2 ({tier2.length})</span></div>
+                {tier2.map(s => (
+                  <div key={s.id} className="hp-line" style={{ paddingLeft: '8px' }}>
+                    {s.name === activeSource?.name ? '>' : ' '} {s.name}
+                  </div>
+                ))}
+                <div className="hp-separator" />
+              </>
+            )}
+            {tier3.length > 0 && (
+              <>
+                <div className="hp-line"><span className="hp-dim">T3 ({tier3.length})</span></div>
+                {tier3.map(s => (
+                  <div key={s.id} className="hp-line" style={{ paddingLeft: '8px' }}>
+                    {s.name === activeSource?.name ? '>' : ' '} {s.name}
+                  </div>
+                ))}
+                <div className="hp-separator" />
+              </>
+            )}
+            {tier4.length > 0 && (
+              <>
+                <div className="hp-line"><span className="hp-dim">T4 ({tier4.length})</span></div>
+                {tier4.map(s => (
+                  <div key={s.id} className="hp-line" style={{ paddingLeft: '8px' }}>
+                    {s.name === activeSource?.name ? '>' : ' '} {s.name}
+                  </div>
+                ))}
+                <div className="hp-separator" />
+              </>
+            )}
             <div className="hp-line">
-              <span className="hp-dim">T1 </span>{tier1.length} sources
-            </div>
-            {tier1.slice(0, 3).map(s => (
-              <div key={s.id} className="hp-line hp-dim" style={{ paddingLeft: '8px' }}>
-                {s.name === activeSource?.name ? '>' : ' '} {s.name}
-              </div>
-            ))}
-            <div className="hp-separator" />
-            <div className="hp-line">
-              <span className="hp-dim">T2 </span>{tier2.length} sources
-            </div>
-            {tier2.slice(0, 3).map(s => (
-              <div key={s.id} className="hp-line hp-dim" style={{ paddingLeft: '8px' }}>
-                {s.name === activeSource?.name ? '>' : ' '} {s.name}
-              </div>
-            ))}
-            <div className="hp-separator" />
-            <div className="hp-line">
-              <span className="hp-dim">T3 </span>{tier3.length} indie
-            </div>
-            <div className="hp-separator" />
-            <div className="hp-line">
-              active: <span style={{ color: '#aaa' }}>{activeSource?.name ?? '...'}</span>
+              active: {activeSource?.name ?? '...'}
             </div>
           </div>
         </div>
@@ -166,7 +192,7 @@ export default function PipelineDashboard({ onOpenAbout }: Props) {
               {status?.last_scan?.sources_scanned ?? '--'}
             </div>
             <div className="hp-line">
-              <span className="hp-dim">found    </span>
+              <span className="hp-dim">found   </span>
               {status?.last_scan?.candidates_found ?? '--'}
             </div>
             <div className="hp-line">
@@ -175,7 +201,7 @@ export default function PipelineDashboard({ onOpenAbout }: Props) {
             </div>
             <div className="hp-separator" />
             <div className="hp-subbox">
-              <div className="hp-subbox-title">SQLITE</div>
+              <div className="hp-subbox-title">SQLITE DATABASE</div>
               <div className="hp-line">
                 <span className="hp-dim">articles </span>
                 {status?.total_articles ?? '--'}
@@ -183,6 +209,10 @@ export default function PipelineDashboard({ onOpenAbout }: Props) {
               <div className="hp-line">
                 <span className="hp-dim">unread   </span>
                 {status?.unread_count ?? '--'}
+              </div>
+              <div className="hp-line">
+                <span className="hp-dim">saved    </span>
+                {status?.saved_count ?? '--'}
               </div>
             </div>
           </div>
@@ -194,42 +224,32 @@ export default function PipelineDashboard({ onOpenAbout }: Props) {
         <div className="hp-box">
           <div className="hp-box-title">TASTE SCORER</div>
           <div className="hp-box-content">
+            <div className="hp-line hp-dim">score breakdown</div>
+            <div className="hp-separator" />
             <div className="hp-line">
-              <span className="hp-dim">domain   </span>
-              <span style={{ color: scoreFrame.domain > 20 ? '#aaa' : '#666' }}>
-                {String(scoreFrame.domain).padStart(2, ' ')}/30
-              </span>
+              <span className="hp-dim">domain  </span>
+              {scoreBar(scoreFrame.domain, 30)} {String(scoreFrame.domain).padStart(2, ' ')}/30
             </div>
             <div className="hp-line">
-              <span className="hp-dim">keyword  </span>
-              <span style={{ color: scoreFrame.keyword > 25 ? '#aaa' : '#666' }}>
-                {String(scoreFrame.keyword).padStart(2, ' ')}/40
-              </span>
+              <span className="hp-dim">keyword </span>
+              {scoreBar(scoreFrame.keyword, 40)} {String(scoreFrame.keyword).padStart(2, ' ')}/40
             </div>
             <div className="hp-line">
-              <span className="hp-dim">source   </span>
-              <span style={{ color: scoreFrame.source > 10 ? '#aaa' : '#666' }}>
-                {String(scoreFrame.source).padStart(2, ' ')}/15
-              </span>
+              <span className="hp-dim">source  </span>
+              {scoreBar(scoreFrame.source, 20)} {String(scoreFrame.source).padStart(2, ' ')}/20
             </div>
             <div className="hp-line">
-              <span className="hp-dim">recency  </span>
-              <span style={{ color: scoreFrame.recency > 10 ? '#aaa' : '#666' }}>
-                {String(scoreFrame.recency).padStart(2, ' ')}/15
-              </span>
+              <span className="hp-dim">recency </span>
+              {scoreBar(scoreFrame.recency, 10)} {String(scoreFrame.recency).padStart(2, ' ')}/10
             </div>
             <div className="hp-separator" />
             <div className="hp-line">
-              <span className="hp-dim">total    </span>
-              <span style={{ color: pass ? '#bbb' : '#555' }}>
-                {String(total).padStart(3, ' ')}/100
-              </span>
+              <span className="hp-dim">total   </span>
+              {String(total).padStart(3, ' ')}/100
             </div>
             <div className="hp-line">
-              <span className="hp-dim">verdict  </span>
-              <span style={{ color: pass ? '#aaa' : '#555' }}>
-                {pass ? 'PASS' : 'SKIP'}
-              </span>
+              <span className="hp-dim">verdict </span>
+              {pass ? 'PASS' : 'skip'}
             </div>
           </div>
         </div>
@@ -242,18 +262,21 @@ export default function PipelineDashboard({ onOpenAbout }: Props) {
           <div className="hp-box-content">
             <div className="hp-line">
               <span className="hp-dim">status </span>
-              <span style={{ color: '#aaa' }}>ready</span>
+              ready
             </div>
             <div className="hp-line">
               <span className="hp-dim">next   </span>
               {nextScanTime}
             </div>
             <div className="hp-separator" />
+            <div className="hp-line hp-dim">recent:</div>
             {recentArticles.map((a, i) => (
-              <div key={a.id} className="hp-line" style={{ opacity: i === 0 ? 1 : 0.45 }}>
+              <div key={a.id} className="hp-line" style={{ opacity: i === 0 ? 1 : Math.max(0.2, 1 - i * 0.12) }}>
                 {a.title}
               </div>
             ))}
+            <div className="hp-separator" />
+            <div className="hp-line hp-dim">tools: rss, scrape, sqlite</div>
           </div>
         </div>
       </div>
@@ -262,21 +285,18 @@ export default function PipelineDashboard({ onOpenAbout }: Props) {
       <div className="hp-feedback-track">
         <span className="hp-feedback-label">sidebar</span>
         <div className="hp-feedback-line">
-          <span
-            className="hp-dot"
-            style={{ left: `${((frame * 3) % 100)}%` }}
-          >
-            &middot;
-          </span>
-          <span
-            className="hp-dot"
-            style={{ left: `${((frame * 3 + 50) % 100)}%` }}
-          >
-            &middot;
-          </span>
+          <span className="hp-dot" style={{ left: `${(frame * 3) % 100}%` }}>&middot;</span>
+          <span className="hp-dot" style={{ left: `${(frame * 3 + 50) % 100}%` }}>&middot;</span>
         </div>
         <span className="hp-feedback-label">reader</span>
-        <span className="hp-feedback-label" style={{ cursor: 'pointer', opacity: 0.6 }} onClick={onOpenAbout}>
+        <div className="hp-feedback-line">
+          <span className="hp-dot" style={{ left: `${(frame * 5 + 20) % 100}%` }}>&middot;</span>
+        </div>
+        <span
+          className="hp-feedback-label"
+          style={{ cursor: 'pointer' }}
+          onClick={onOpenAbout}
+        >
           [about]
         </span>
       </div>

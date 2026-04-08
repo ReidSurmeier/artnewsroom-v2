@@ -103,12 +103,24 @@ pub fn init_db(path: &PathBuf) -> Result<Connection> {
             errors TEXT
         );
 
+        CREATE TABLE IF NOT EXISTS article_images (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            article_id TEXT NOT NULL,
+            original_url TEXT NOT NULL,
+            ascii_art TEXT NOT NULL,
+            bw_image_path TEXT NOT NULL,
+            alt_text TEXT DEFAULT '',
+            position INTEGER DEFAULT 0,
+            FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE
+        );
+
         CREATE INDEX IF NOT EXISTS idx_articles_date ON articles(date_added);
         CREATE INDEX IF NOT EXISTS idx_articles_source ON articles(source);
         CREATE INDEX IF NOT EXISTS idx_articles_archived ON articles(is_archived);
         CREATE INDEX IF NOT EXISTS idx_candidates_url ON candidates(url);
         CREATE INDEX IF NOT EXISTS idx_candidates_promoted ON candidates(promoted);
         CREATE INDEX IF NOT EXISTS idx_annotations_article ON annotations(article_id);
+        CREATE INDEX IF NOT EXISTS idx_article_images_article ON article_images(article_id);
         ",
     )?;
 
@@ -274,7 +286,7 @@ fn article_id(url: &str) -> String {
     hex::encode(&hasher.finalize()[..8])
 }
 
-pub fn insert_article(conn: &Connection, cand: &CandidateRow, extracted: &ExtractedArticle) -> Result<()> {
+pub fn insert_article(conn: &Connection, cand: &CandidateRow, extracted: &ExtractedArticle) -> Result<String> {
     let id = article_id(&cand.url);
     let now = Utc::now().to_rfc3339();
     let excerpt = if extracted.content_markdown.len() > 300 {
@@ -306,6 +318,23 @@ pub fn insert_article(conn: &Connection, cand: &CandidateRow, extracted: &Extrac
             extracted.word_count as i32,
             now,
         ],
+    )?;
+    Ok(id)
+}
+
+pub fn insert_article_image(
+    conn: &Connection,
+    article_id: &str,
+    original_url: &str,
+    ascii_art: &str,
+    bw_image_path: &str,
+    alt_text: &str,
+    position: i32,
+) -> Result<()> {
+    conn.execute(
+        "INSERT INTO article_images (article_id, original_url, ascii_art, bw_image_path, alt_text, position)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        params![article_id, original_url, ascii_art, bw_image_path, alt_text, position],
     )?;
     Ok(())
 }

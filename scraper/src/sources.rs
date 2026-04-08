@@ -11,7 +11,7 @@ pub struct SourceDef {
 
 pub fn all_sources() -> Vec<SourceDef> {
     vec![
-        // ── Tier 1 (Core) — 22 sources ──
+        // ── Tier 1 (Core) ──
         SourceDef {
             name: "Spike Art Magazine",
             url: "https://www.spikeartmagazine.com",
@@ -19,7 +19,7 @@ pub fn all_sources() -> Vec<SourceDef> {
             tier: 1,
             scrape_method: "rss",
             is_paywalled: false,
-            enabled: true,
+            enabled: false, // feed parse error, non-standard format
         },
         SourceDef {
             name: "The New Yorker",
@@ -73,7 +73,7 @@ pub fn all_sources() -> Vec<SourceDef> {
             tier: 1,
             scrape_method: "rss",
             is_paywalled: false,
-            enabled: true,
+            enabled: true, // intermittent 502s, keep enabled
         },
         SourceDef {
             name: "Harper's Magazine",
@@ -91,7 +91,7 @@ pub fn all_sources() -> Vec<SourceDef> {
             tier: 1,
             scrape_method: "rss",
             is_paywalled: false,
-            enabled: true,
+            enabled: false, // 403 persists
         },
         SourceDef {
             name: "n+1",
@@ -100,16 +100,16 @@ pub fn all_sources() -> Vec<SourceDef> {
             tier: 1,
             scrape_method: "rss",
             is_paywalled: true,
-            enabled: true,
+            enabled: false, // 403 persists
         },
         SourceDef {
             name: "Brooklyn Rail",
             url: "https://brooklynrail.org",
-            feed_url: Some("https://brooklynrail.org/rss"),
+            feed_url: Some("https://brooklynrail.org/rss.xml"),
             tier: 1,
             scrape_method: "rss",
             is_paywalled: false,
-            enabled: true,
+            enabled: false, // 404 on all known feed URLs
         },
         SourceDef {
             name: "Gagosian Quarterly",
@@ -118,7 +118,7 @@ pub fn all_sources() -> Vec<SourceDef> {
             tier: 1,
             scrape_method: "rss",
             is_paywalled: false,
-            enabled: true,
+            enabled: false, // 404 persists
         },
         SourceDef {
             name: "Asterisk",
@@ -177,11 +177,11 @@ pub fn all_sources() -> Vec<SourceDef> {
         SourceDef {
             name: "Bomb Magazine",
             url: "https://bombmagazine.org",
-            feed_url: Some("https://bombmagazine.org/feed"),
+            feed_url: Some("https://bombmagazine.org/rss"),
             tier: 1,
             scrape_method: "rss",
             is_paywalled: false,
-            enabled: true,
+            enabled: false, // 404 on all known feed URLs
         },
         SourceDef {
             name: "The Art Newspaper",
@@ -190,7 +190,7 @@ pub fn all_sources() -> Vec<SourceDef> {
             tier: 1,
             scrape_method: "rss",
             is_paywalled: false,
-            enabled: true,
+            enabled: false, // 404 on /rss and /feed
         },
         SourceDef {
             name: "Contemporary Art Daily",
@@ -210,7 +210,7 @@ pub fn all_sources() -> Vec<SourceDef> {
             is_paywalled: false,
             enabled: true,
         },
-        // ── Tier 2 (Discovery) — 15 sources ──
+        // ── Tier 2 (Discovery) ──
         SourceDef {
             name: "Fakewhale",
             url: "https://fakewhale.art",
@@ -218,7 +218,7 @@ pub fn all_sources() -> Vec<SourceDef> {
             tier: 2,
             scrape_method: "rss",
             is_paywalled: false,
-            enabled: true,
+            enabled: false, // consistently fails
         },
         SourceDef {
             name: "Public Domain Review",
@@ -250,11 +250,11 @@ pub fn all_sources() -> Vec<SourceDef> {
         SourceDef {
             name: "Pioneer Works",
             url: "https://pioneerworks.org",
-            feed_url: Some("https://pioneerworks.org/feed/"),
+            feed_url: Some("https://pioneerworks.org/broadcast/feed/"),
             tier: 2,
             scrape_method: "rss",
             is_paywalled: false,
-            enabled: true,
+            enabled: false, // 500 persists
         },
         SourceDef {
             name: "The Drift",
@@ -263,16 +263,16 @@ pub fn all_sources() -> Vec<SourceDef> {
             tier: 2,
             scrape_method: "rss",
             is_paywalled: false,
-            enabled: true,
+            enabled: false, // 403 persists
         },
         SourceDef {
             name: "Rhizome",
             url: "https://rhizome.org",
-            feed_url: Some("https://rhizome.org/rss/"),
+            feed_url: Some("https://rhizome.org/editorial/feed/"),
             tier: 2,
             scrape_method: "rss",
             is_paywalled: false,
-            enabled: true,
+            enabled: false, // 403 persists
         },
         SourceDef {
             name: "Momus",
@@ -281,7 +281,7 @@ pub fn all_sources() -> Vec<SourceDef> {
             tier: 2,
             scrape_method: "rss",
             is_paywalled: false,
-            enabled: true,
+            enabled: false, // connection fails
         },
         SourceDef {
             name: "Elephant Magazine",
@@ -299,34 +299,34 @@ pub fn all_sources() -> Vec<SourceDef> {
             tier: 2,
             scrape_method: "rss",
             is_paywalled: false,
-            enabled: true,
+            enabled: false, // 404 on all known feed URLs
         },
         SourceDef {
             name: "e-flux Announcements",
             url: "https://www.e-flux.com",
-            feed_url: Some("https://www.e-flux.com/rss/"),
+            feed_url: Some("https://e-flux.com/rss/"),
             tier: 2,
             scrape_method: "rss",
             is_paywalled: false,
-            enabled: true,
+            enabled: false, // 404 on all known feed URLs
         },
         SourceDef {
             name: "Frieze",
             url: "https://www.frieze.com",
-            feed_url: Some("https://www.frieze.com/rss"),
+            feed_url: Some("https://frieze.com/feed"),
             tier: 2,
             scrape_method: "rss",
             is_paywalled: true,
-            enabled: true,
+            enabled: false, // 403 persists, heavy paywall
         },
         SourceDef {
             name: "Ocula",
             url: "https://ocula.com",
-            feed_url: Some("https://ocula.com/rss/"),
+            feed_url: Some("https://ocula.com/magazine/rss/"),
             tier: 2,
             scrape_method: "rss",
             is_paywalled: false,
-            enabled: true,
+            enabled: false, // 403 persists
         },
         SourceDef {
             name: "Aperture",
@@ -335,7 +335,7 @@ pub fn all_sources() -> Vec<SourceDef> {
             tier: 2,
             scrape_method: "rss",
             is_paywalled: false,
-            enabled: true,
+            enabled: false, // 403 persists
         },
         SourceDef {
             name: "Art Agenda",
@@ -344,9 +344,27 @@ pub fn all_sources() -> Vec<SourceDef> {
             tier: 2,
             scrape_method: "rss",
             is_paywalled: false,
+            enabled: false, // 404
+        },
+        SourceDef {
+            name: "Artnet News",
+            url: "https://news.artnet.com",
+            feed_url: Some("https://news.artnet.com/feed/"),
+            tier: 2,
+            scrape_method: "rss",
+            is_paywalled: false,
             enabled: true,
         },
-        // ── Tier 3 (Indie) — 8 sources ──
+        SourceDef {
+            name: "The White Pube",
+            url: "https://www.thewhitepube.co.uk",
+            feed_url: Some("https://www.thewhitepube.co.uk/feed"),
+            tier: 2,
+            scrape_method: "rss",
+            is_paywalled: false,
+            enabled: false, // feed parse error
+        },
+        // ── Tier 3 (Indie) ──
         SourceDef {
             name: "Piper Haywood",
             url: "https://piperhaywood.com",
@@ -372,7 +390,7 @@ pub fn all_sources() -> Vec<SourceDef> {
             tier: 3,
             scrape_method: "rss",
             is_paywalled: false,
-            enabled: true,
+            enabled: false, // 404
         },
         SourceDef {
             name: "Arachne",
@@ -419,16 +437,16 @@ pub fn all_sources() -> Vec<SourceDef> {
             is_paywalled: false,
             enabled: true,
         },
-        // ── Tier 4 (Supplemental) ──
         SourceDef {
-            name: "Artnet News",
-            url: "https://news.artnet.com",
-            feed_url: Some("https://news.artnet.com/feed/"),
-            tier: 4,
+            name: "CARLA",
+            url: "https://contemporaryartreview.la",
+            feed_url: Some("https://contemporaryartreview.la/feed/"),
+            tier: 3,
             scrape_method: "rss",
             is_paywalled: false,
             enabled: true,
         },
+        // ── Tier 4 (Supplemental) ──
         SourceDef {
             name: "Yale Review",
             url: "https://yalereview.org",
@@ -436,7 +454,7 @@ pub fn all_sources() -> Vec<SourceDef> {
             tier: 4,
             scrape_method: "rss",
             is_paywalled: false,
-            enabled: true,
+            enabled: false, // 404 persists
         },
         SourceDef {
             name: "New Models",

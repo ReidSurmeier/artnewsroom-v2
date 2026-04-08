@@ -22,31 +22,32 @@ interface ArticleRow {
   excerpt: string | null;
 }
 
-type ViewMode = 'active' | 'archived' | 'saved';
-
 export default function HomePage() {
   const [articles, setArticles] = useState<ArticleRow[]>([]);
   const [annotationCounts, setAnnotationCounts] = useState<Record<string, number>>({});
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('active');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [focusMode, setFocusMode] = useState(false);
+  const [showArchive, setShowArchive] = useState(false);
+  const [showSaved, setShowSaved] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
-  const fetchedMode = useRef<ViewMode | null>(null);
+  const [filterIds, setFilterIds] = useState<string[] | null>(null);
+  const [drawMode, setDrawMode] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
+  const fetchedRef = useRef<string | null>(null);
 
-  const loadArticles = useCallback((mode: ViewMode) => {
+  const loadArticles = useCallback((mode: 'active' | 'archived' | 'saved') => {
     const params = mode === 'archived' ? '?archived=true' : mode === 'saved' ? '?saved=true' : '';
     fetch(`/api/articles${params}`)
       .then(r => r.json())
       .then(setArticles)
       .catch(() => {});
-    fetchedMode.current = mode;
+    fetchedRef.current = mode;
   }, []);
 
   useEffect(() => {
-    loadArticles(viewMode);
+    const mode = showArchive ? 'archived' : showSaved ? 'saved' : 'active';
+    loadArticles(mode);
     fetch('/api/annotation-counts').then(r => r.json()).then(setAnnotationCounts).catch(() => {});
-  }, [viewMode, loadArticles]);
+  }, [showArchive, showSaved, loadArticles]);
 
   const handleSelect = (id: string) => {
     setSelectedId(id);
@@ -56,56 +57,105 @@ export default function HomePage() {
 
   const handleBack = () => {
     setSelectedId(null);
+    setDrawMode(false);
     fetch('/api/annotation-counts').then(r => r.json()).then(setAnnotationCounts).catch(() => {});
   };
 
-  const handleViewMode = (mode: ViewMode) => {
-    setViewMode(mode);
+  const handleToggleArchive = () => {
+    setShowArchive(v => !v);
+    setShowSaved(false);
+    setSelectedId(null);
+    setShowAbout(false);
+  };
+
+  const handleToggleSaved = () => {
+    setShowSaved(v => !v);
+    setShowArchive(false);
+    setSelectedId(null);
+    setShowAbout(false);
+  };
+
+  const handleShowAbout = () => {
+    setShowAbout(v => !v);
     setSelectedId(null);
   };
 
-  const showSidebar = !focusMode;
+  const handleSave = async (articleId: string, saved: boolean) => {
+    await fetch('/api/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ articleId, saved }),
+    });
+    setArticles(prev => prev.map(a => a.id === articleId ? { ...a, is_saved: saved ? 1 : 0 } : a));
+  };
+
+  const handleArchive = async (articleId: string, archived: boolean) => {
+    await fetch('/api/archive', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ articleId, archived }),
+    });
+    setArticles(prev => prev.map(a => a.id === articleId ? { ...a, is_archived: archived ? 1 : 0 } : a));
+    if (archived) {
+      setSelectedId(null);
+      setDrawMode(false);
+    }
+  };
+
+  const articleSummaries = articles.map(a => ({
+    id: a.id,
+    title: a.title,
+    source: a.source,
+    excerpt: a.excerpt,
+  }));
+
+  const selectedArticle = articles.find(a => a.id === selectedId);
 
   return (
-    <div className="app-root">
+    <div className={focusMode ? 'focus-mode' : ''}>
       <TitleBar
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        viewMode={viewMode}
-        onViewMode={handleViewMode}
+        articles={articleSummaries}
+        onFilter={setFilterIds}
+        showArchive={showArchive}
+        onToggleArchive={handleToggleArchive}
+        showSaved={showSaved}
+        onToggleSaved={handleToggleSaved}
+        articleSelected={!!selectedId}
+        drawMode={drawMode}
+        onToggleDraw={() => setDrawMode(v => !v)}
         focusMode={focusMode}
-        onFocusMode={setFocusMode}
-        onAbout={() => { setShowAbout(v => !v); setSelectedId(null); }}
+        onToggleFocus={() => setFocusMode(v => !v)}
+        showAbout={showAbout}
+        onShowAbout={handleShowAbout}
       />
 
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        {showSidebar && (
-          <div className="sidebar">
-            <Sidebar
-              articles={articles}
-              selectedId={selectedId}
-              onSelect={handleSelect}
-              annotationCounts={annotationCounts}
-              searchQuery={searchQuery}
-            />
-          </div>
-        )}
+      <Sidebar
+        articles={articles}
+        selectedId={selectedId}
+        onSelect={handleSelect}
+        annotationCounts={annotationCounts}
+        filterIds={filterIds}
+      />
 
-        <div className="content-area" style={{ padding: 0 }}>
-          {showAbout ? (
-            <AboutPage onClose={() => setShowAbout(false)} />
-          ) : selectedId ? (
-            <ArticleReader
-              key={selectedId}
-              articleId={selectedId}
-              onBack={handleBack}
-              focusMode={focusMode}
-            />
-          ) : (
-            <PipelineDashboard onOpenAbout={() => setShowAbout(true)} />
-          )}
-        </div>
-      </div>
+      <main className={`content-area${selectedId ? ' article-open' : ''}`}>
+        {showAbout ? (
+          <AboutPage onClose={() => setShowAbout(false)} />
+        ) : selectedId ? (
+          <ArticleReader
+            key={selectedId}
+            articleId={selectedId}
+            onBack={handleBack}
+            focusMode={focusMode}
+            drawMode={drawMode}
+            isSaved={selectedArticle?.is_saved === 1}
+            isArchived={selectedArticle?.is_archived === 1}
+            onSave={handleSave}
+            onArchive={handleArchive}
+          />
+        ) : (
+          <PipelineDashboard onOpenAbout={handleShowAbout} />
+        )}
+      </main>
     </div>
   );
 }
