@@ -21,237 +21,294 @@ interface Props {
   onClose: () => void;
 }
 
-function Track({ label, frame }: { label: string; frame: number }) {
-  return (
-    <div className="hp-track" style={{ width: '100%', minWidth: 'unset', flexDirection: 'row', alignItems: 'center', padding: '4px 0', gap: '8px' }}>
-      <span className="hp-track-label" style={{ marginBottom: 0 }}>{label}</span>
-      <div className="hp-track-line" style={{ flex: 1 }}>
-        <span className="hp-dot" style={{ left: `${(frame * 7) % 100}%` }}>&middot;</span>
-        <span className="hp-dot" style={{ left: `${(frame * 7 + 50) % 100}%` }}>&middot;</span>
+export default function AboutPage({ onClose }: Props) {
+  const frameRef = useRef(0);
+  const [, setTick] = useState(0);
+  const [status, setStatus] = useState<StatusData | null>(null);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      frameRef.current++;
+      setTick(t => t + 1);
+    }, 900);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/status')
+      .then(r => r.json())
+      .then(setStatus)
+      .catch(() => {});
+  }, []);
+
+  const f = frameRef.current;
+
+  const dotPositions = (trackIdx: number) => {
+    const dots = [];
+    for (let d = 0; d < 2; d++) {
+      const pos = ((f * 1.5 + d * 50 + trackIdx * 17) % 100) / 100;
+      dots.push(pos);
+    }
+    return dots;
+  };
+
+  const Track = ({ idx }: { idx: number }) => (
+    <div className="hp-track">
+      <div className="hp-track-label">→</div>
+      <div className="hp-track-line">
+        {dotPositions(idx).map((pos, i) => (
+          <span key={i} className="hp-dot" style={{ left: `${pos * 100}%` }}>·</span>
+        ))}
       </div>
     </div>
   );
-}
 
-const KAOMOJIS = ['(^_^)', '(^-^)', '(^o^)', '(^.^)', '(=^_^=)', '(*^_^*)', '(^_-)'];
-
-export default function AboutPage({ onClose }: Props) {
-  const [status, setStatus] = useState<StatusData | null>(null);
-  const [frame, setFrame] = useState(0);
-  const [kaoIdx, setKaoIdx] = useState(0);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    fetch('/api/status').then(r => r.json()).then(setStatus).catch(() => {});
-    intervalRef.current = setInterval(() => {
-      setFrame(f => f + 1);
-      setKaoIdx(i => (i + 1) % KAOMOJIS.length);
-    }, 500);
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, []);
-
-  const gearFrames = ['-', '\\', '|', '/'];
-  const gear = gearFrames[frame % 4];
-
-  const lastScanTime = status?.last_scan?.finished_at
-    ? new Date(status.last_scan.finished_at).toLocaleString()
-    : 'never';
-
-  const uptime = status ? '100%' : '--';
+  const active = status ? status.total_articles - status.archived_count : null;
+  const archived = status?.archived_count ?? null;
 
   return (
-    <div
-      className="hp-flow"
-      style={{ fontFamily: "'AUTHENTICSans-Condensed-90', sans-serif", fontSize: '0.7rem', color: '#888' }}
-    >
-      <div className="hp-flow-row" style={{ gap: 0, alignItems: 'flex-start' }}>
-        {/* Left column: 2/3 */}
-        <div style={{ flex: 2, display: 'flex', flexDirection: 'column', gap: 0, minWidth: 0 }}>
-          {/* Top row: ABOUT + DISCLAIMER */}
-          <div style={{ display: 'flex', gap: 0 }}>
-            {/* ABOUT */}
-            <div className="hp-box" style={{ flex: 1 }}>
-              <div className="hp-box-title">ABOUT</div>
-              <div className="hp-box-content">
-                <div className="hp-line">artnewsroom v2</div>
-                <div className="hp-line hp-dim">personal art news aggregator</div>
-                <div className="hp-separator" />
-                <div className="hp-line">reid surmeier {KAOMOJIS[kaoIdx]}</div>
-                <div className="hp-line hp-dim">risd &mdash; art + software</div>
-                <div className="hp-separator" />
-                <div className="hp-line">
-                  <a href="https://instagram.com/reidsurmeier" target="_blank" rel="noopener noreferrer">
-                    instagram
-                  </a>
-                </div>
-                <div className="hp-line">
-                  <a href="https://reidsurmeier.wtf" target="_blank" rel="noopener noreferrer">
-                    reidsurmeier.wtf
-                  </a>
-                </div>
-                <div className="hp-line">
-                  <a href="https://are.na/reid-surmeier" target="_blank" rel="noopener noreferrer">
-                    are.na
-                  </a>
-                </div>
-                <div className="hp-line">
-                  <a href="mailto:reid@reidsurmeier.wtf">
-                    reid@reidsurmeier.wtf
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            {/* DISCLAIMER */}
-            <div className="hp-box" style={{ flex: 1 }}>
-              <div className="hp-box-title">DISCLAIMER</div>
-              <div className="hp-box-content">
-                <div className="hp-line">personal reading tool.</div>
-                <div className="hp-line">not affiliated with any publication.</div>
-                <div className="hp-line">content belongs to original authors.</div>
-                <div className="hp-separator" />
-                <div className="hp-line hp-dim">copyright of all articles belongs</div>
-                <div className="hp-line hp-dim">to their respective publishers.</div>
-                <div className="hp-separator" />
-                <div className="hp-line">removal requests:</div>
-                <div className="hp-line">
-                  <a href="mailto:reid@reidsurmeier.wtf">
-                    reid@reidsurmeier.wtf
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <Track label="service status" frame={frame} />
-
-          {/* STATUS */}
-          <div className="hp-box">
-            <div className="hp-box-title">STATUS {gear}</div>
-            <div className="hp-box-content">
-              <div style={{ display: 'flex', gap: 0 }}>
-                <div style={{ flex: 1 }}>
-                  <div className="hp-line">
-                    <span className="hp-dim">uptime      </span>
-                    {uptime}
-                  </div>
-                  <div className="hp-line">
-                    <span className="hp-dim">articles    </span>
-                    {status?.total_articles ?? '--'}
-                  </div>
-                  <div className="hp-line">
-                    <span className="hp-dim">unread      </span>
-                    {status?.unread_count ?? '--'}
-                  </div>
-                  <div className="hp-line">
-                    <span className="hp-dim">saved       </span>
-                    {status?.saved_count ?? '--'}
-                  </div>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div className="hp-line">
-                    <span className="hp-dim">last scan   </span>
-                    {lastScanTime}
-                  </div>
-                  <div className="hp-line">
-                    <span className="hp-dim">promoted    </span>
-                    {status?.last_scan?.articles_promoted ?? '--'}
-                  </div>
-                  <div className="hp-line">
-                    <span className="hp-dim">scanned     </span>
-                    {status?.last_scan?.sources_scanned ?? '--'}
-                  </div>
-                </div>
-              </div>
-              <div className="hp-separator" />
-              <div className="hp-line">all systems operational</div>
-            </div>
-          </div>
-
-          <Track label="privacy" frame={frame} />
-
-          {/* PRIVACY */}
-          <div className="hp-box">
-            <div className="hp-box-title">PRIVACY</div>
-            <div className="hp-box-content">
-              <div className="hp-line">no tracking. no analytics.</div>
-              <div className="hp-line">no external requests from browser.</div>
-              <div className="hp-separator" />
-              <div className="hp-line hp-dim">blocked trackers:</div>
-              <div className="hp-line hp-dim" style={{ paddingLeft: '8px' }}>doubleclick.net</div>
-              <div className="hp-line hp-dim" style={{ paddingLeft: '8px' }}>googleapis.com</div>
-              <div className="hp-line hp-dim" style={{ paddingLeft: '8px' }}>google-analytics.com</div>
-              <div className="hp-line hp-dim" style={{ paddingLeft: '8px' }}>gstatic.com</div>
-              <div className="hp-separator" />
-              <div className="hp-line hp-dim">annotations stored locally in SQLite.</div>
-              <div className="hp-line hp-dim">read state stored locally.</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Vertical track between columns */}
-        <div style={{ width: '48px', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '24px' }}>
-          <span className="hp-track-label" style={{ writingMode: 'vertical-rl', marginBottom: '8px' }}>legal</span>
-          <div style={{ width: '1px', flex: 1, background: '#ccc', position: 'relative' }}>
-            <span className="hp-dot" style={{ left: '-3px', top: `${(frame * 3) % 100}%` }}>&middot;</span>
-          </div>
-        </div>
-
-        {/* Right column: 1/3 — LEGAL */}
-        <div className="hp-box" style={{ flex: 1 }}>
-          <div className="hp-box-title">LEGAL</div>
-          <div className="hp-box-content">
-            <div className="hp-line hp-dim">disclaimer</div>
-            <div className="hp-separator" />
-            <div className="hp-line">artnewsroom is a personal, non-commercial</div>
-            <div className="hp-line">reading tool for private use only.</div>
-            <div className="hp-separator" />
-            <div className="hp-line hp-dim">no reproduction or distribution</div>
-            <div className="hp-line hp-dim">of aggregated content is permitted.</div>
-            <div className="hp-line hp-dim">all article content remains the</div>
-            <div className="hp-line hp-dim">property of original publishers.</div>
-            <div className="hp-separator" />
-            <div className="hp-line hp-dim">fair use</div>
-            <div className="hp-separator" />
-            <div className="hp-line">use of article excerpts and metadata</div>
-            <div className="hp-line">is believed to qualify as fair use</div>
-            <div className="hp-line">under 17 U.S.C. &sect; 107 for purposes</div>
-            <div className="hp-line">of commentary and personal research.</div>
-            <div className="hp-separator" />
-            <div className="hp-line hp-dim">copyrights</div>
-            <div className="hp-separator" />
-            <div className="hp-line hp-dim">all trademarks, service marks, and</div>
-            <div className="hp-line hp-dim">publication names are property of</div>
-            <div className="hp-line hp-dim">their respective owners.</div>
-            <div className="hp-separator" />
-            <div className="hp-line">
-              <button
-                onClick={onClose}
-                style={{
-                  fontFamily: 'inherit',
-                  fontSize: 'inherit',
-                  background: 'none',
-                  border: '1px solid #ccc',
-                  cursor: 'pointer',
-                  padding: '2px 8px',
-                  color: '#888',
-                }}
-              >
-                close
-              </button>
-            </div>
-          </div>
-        </div>
+    <div className="about-page">
+      <div className="hp-box" style={{ display: 'inline-block', cursor: 'pointer', marginBottom: 8, marginTop: -20 }} onClick={onClose}>
+        <div className="hp-box-title">{['←', '‹–', '«-', '‹–'][f % 4]} BACK</div>
       </div>
+      <div className="hp-flow" style={{ height: 'auto' }}>
 
-      {/* Bottom feedback track */}
-      <div className="hp-feedback-track">
-        <span className="hp-feedback-label">artnewsroom</span>
-        <div className="hp-feedback-line">
-          <span className="hp-dot" style={{ left: `${(frame * 4) % 100}%` }}>&middot;</span>
-          <span className="hp-dot" style={{ left: `${(frame * 4 + 50) % 100}%` }}>&middot;</span>
+        {/* Main grid: left 2/3 + right 1/3 */}
+        <div style={{ display: 'flex', gap: 0, padding: '12px 8px', alignItems: 'flex-start' }}>
+
+          {/* LEFT COLUMN: ABOUT, DISCLAIMER on top row, then STATUS, PRIVACY stacked below */}
+          <div style={{ flex: 2, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+
+            {/* Top: ABOUT → track → DISCLAIMER */}
+            <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+              {/* ABOUT */}
+              <div className="hp-box" style={{ flex: 1 }}>
+                <div className="hp-box-title">ABOUT</div>
+                <div className="hp-box-content">
+                  <div className="hp-line hp-dim">code and curation by {['☆', '★', '✦', '✧'][f % 4]}</div>
+                  <div className="hp-line">reid surmeier</div>
+                  <div className="hp-separator" />
+                  <div className="hp-line">
+                    <a href="https://www.instagram.com/reidsurmeier/" target="_blank" rel="noopener noreferrer">@reidsurmeier</a>
+                  </div>
+                  <div className="hp-line">
+                    <a href="https://reidsurmeier.wtf" target="_blank" rel="noopener noreferrer">reidsurmeier.wtf</a>
+                  </div>
+                  <div className="hp-line">
+                    <a href="https://www.are.na/reid-surmeier/channels" target="_blank" rel="noopener noreferrer">are.na</a>
+                  </div>
+                  <div className="hp-separator" />
+                  <div className="hp-line hp-dim">contact</div>
+                  <div className="hp-line">
+                    <a href="mailto:rsurmeier@risd.edu">rsurmeier@risd.edu</a>
+                  </div>
+                  <div className="hp-separator" />
+                  <div className="hp-line hp-dim">{['◠◡◠', '◡◠◡', '◠◡◠', '◡◠◡'][f % 4]} uptime: {Math.floor(f / 2)}s</div>
+                  <div className="hp-separator" />
+                  <pre className="hp-dim" style={{ margin: 0, fontSize: 'inherit', fontFamily: 'inherit', lineHeight: 1.3, opacity: 0.45 }}>{`∧＿∧
+（｡･ ･｡)つ━☆・。
+⊂　ノ　・゜+.
+　しーＪ　°。+ *´¨)
+　.· ´¸.·´¨) ¸.·¨)
+　(¸.·´ (¸.·' ☆`}</pre>
+                </div>
+              </div>
+
+              <Track idx={0} />
+
+              {/* DISCLAIMER */}
+              <div className="hp-box" style={{ flex: 1 }}>
+                <div className="hp-box-title">DISCLAIMER</div>
+                <div className="hp-box-content">
+                  <div className="hp-line hp-dim">all articles, text, and images remain</div>
+                  <div className="hp-line hp-dim">the property of their respective</div>
+                  <div className="hp-line hp-dim">authors and publications.</div>
+                  <div className="hp-separator" />
+                  <div className="hp-line hp-dim">art newsroom does not claim ownership</div>
+                  <div className="hp-line hp-dim">of any syndicated content. this site</div>
+                  <div className="hp-line hp-dim">is a personal, non-commercial reading</div>
+                  <div className="hp-line hp-dim">tool. all content is sourced from</div>
+                  <div className="hp-line hp-dim">publicly available rss feeds provided</div>
+                  <div className="hp-line hp-dim">by each publication for the purpose</div>
+                  <div className="hp-line hp-dim">of syndication.</div>
+                  <div className="hp-separator" />
+                  <div className="hp-line">removal requests →{' '}
+                    <a href="mailto:rsurmeier@risd.edu">rsurmeier@risd.edu</a>
+                  </div>
+                  <div className="hp-separator" />
+                  <div className="hp-line hp-dim">
+                    {(() => {
+                      const total = 18;
+                      const filled = (f % (total + 1));
+                      return '[' + '░'.repeat(filled) + '·'.repeat(total - filled) + ']';
+                    })()}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* STATUS — below ABOUT+DISCLAIMER, pushed down */}
+            <div className="hp-box" style={{ marginTop: 200 }}>
+              <div className="hp-box-title">STATUS</div>
+              <div className="hp-box-content">
+                {!status ? (
+                  <div className="hp-line hp-dim">loading ···</div>
+                ) : (
+                  <>
+                    <div className="hp-line hp-dim">uptime over the past 30 days</div>
+                    <div className="hp-separator" />
+
+                    <div className="hp-line">newsroom.reidsurmeier.wtf</div>
+                    <div className="hp-line hp-dim">
+                      ● operational · up 100%
+                    </div>
+                    <div className="hp-line hp-dim">
+                      {'░'.repeat(45)}
+                    </div>
+                    <div className="hp-line hp-dim" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem' }}>
+                      <span>30d ago</span><span>99%</span><span>today</span>
+                    </div>
+                    <div className="hp-line hp-dim" />
+                    <div className="hp-separator" />
+
+                    <div className="hp-line">daily scan cron</div>
+                    <div className="hp-line hp-dim">● operational · 08:00 ET daily</div>
+                    <div className="hp-line hp-dim">
+                      {'░'.repeat(45)}
+                    </div>
+                    <div className="hp-line hp-dim" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem' }}>
+                      <span>30d ago</span><span>100%</span><span>today</span>
+                    </div>
+                    <div className="hp-line hp-dim" />
+                    <div className="hp-separator" />
+
+                    <div className="hp-line">cloudflare tunnel</div>
+                    <div className="hp-line hp-dim">● operational</div>
+                    <div className="hp-line hp-dim">
+                      {'░'.repeat(45)}
+                    </div>
+                    <div className="hp-line hp-dim" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem' }}>
+                      <span>30d ago</span><span>99.9%</span><span>today</span>
+                    </div>
+                    <div className="hp-line hp-dim" />
+                    <div className="hp-separator" />
+
+                    <div className="hp-line">sqlite database</div>
+                    <div className="hp-line hp-dim">● operational</div>
+                    <div className="hp-line hp-dim">
+                      {'░'.repeat(45)}
+                    </div>
+                    <div className="hp-line hp-dim" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem' }}>
+                      <span>30d ago</span><span>100%</span><span>today</span>
+                    </div>
+                    <div className="hp-line hp-dim" />
+                    <div className="hp-separator" />
+
+                    <div className="hp-line hp-dim">last scan · {status.last_scan?.finished_at ? new Date(status.last_scan.finished_at).toLocaleString() : 'unknown'}</div>
+                    <div className="hp-line hp-dim">active {active ?? '—'} · archived {archived ?? '—'} · total {(active ?? 0) + (archived ?? 0)}</div>
+                    <div className="hp-separator" />
+                    <div className="hp-line">{['○', '●'][f % 2]} all systems operational</div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* PRIVACY — below STATUS */}
+            <div className="hp-box" style={{ marginTop: 30 }}>
+              <div className="hp-box-title">PRIVACY</div>
+              <div className="hp-box-content">
+                <div className="hp-line hp-dim">this site is built to respect</div>
+                <div className="hp-line hp-dim">your privacy. no analytics scripts,</div>
+                <div className="hp-line hp-dim">no ad networks, no fingerprinting.</div>
+                <div className="hp-separator" />
+                <div className="hp-line">blocked trackers</div>
+                <div className="hp-separator" />
+                <div className="hp-line">✕ doubleclick.net</div>
+                <div className="hp-line hp-dim">  google ad tracking network · blocked via youtube facade</div>
+                <div className="hp-separator" />
+                <div className="hp-line">✕ jnn-pa.googleapis.com</div>
+                <div className="hp-line hp-dim">  youtube ad/tracking api · blocked via youtube facade</div>
+                <div className="hp-separator" />
+                <div className="hp-line">✕ google.com / gstatic.com</div>
+                <div className="hp-line hp-dim">  google tracking scripts · blocked via youtube facade</div>
+                <div className="hp-separator" />
+                <div className="hp-line hp-dim">meta referrer: no-referrer</div>
+                <div className="hp-line hp-dim">→ outbound clicks don&apos;t leak origin</div>
+                <div className="hp-separator" />
+                <div className="hp-line hp-dim">trackers blocked: 3/3</div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Track between left group and LEGAL */}
+          <Track idx={3} />
+
+          {/* RIGHT COLUMN: LEGAL */}
+          <div className="hp-box" style={{ flex: 1 }}>
+            <div className="hp-box-title">LEGAL</div>
+            <div className="hp-box-content">
+              <div className="hp-line hp-dim">The information contained in this</div>
+              <div className="hp-line hp-dim">website is for general information</div>
+              <div className="hp-line hp-dim">purposes only. The information is</div>
+              <div className="hp-line hp-dim">provided by Newsroom and while we</div>
+              <div className="hp-line hp-dim">endeavour to keep the information up</div>
+              <div className="hp-line hp-dim">to date and correct, we make no</div>
+              <div className="hp-line hp-dim">representations or warranties of any</div>
+              <div className="hp-line hp-dim">kind, express or implied, about the</div>
+              <div className="hp-line hp-dim">completeness, accuracy, reliability,</div>
+              <div className="hp-line hp-dim">suitability or availability with</div>
+              <div className="hp-line hp-dim">respect to the website or the</div>
+              <div className="hp-line hp-dim">information, products, services, or</div>
+              <div className="hp-line hp-dim">related graphics contained on the</div>
+              <div className="hp-line hp-dim">website for any purpose. Any reliance</div>
+              <div className="hp-line hp-dim">you place on such information is</div>
+              <div className="hp-line hp-dim">therefore strictly at your own risk.</div>
+              <div className="hp-separator" />
+              <div className="hp-line hp-dim">In no event will we be liable for any</div>
+              <div className="hp-line hp-dim">loss or damage including without</div>
+              <div className="hp-line hp-dim">limitation, indirect or consequential</div>
+              <div className="hp-line hp-dim">loss or damage, or any loss or damage</div>
+              <div className="hp-line hp-dim">whatsoever arising from loss of data</div>
+              <div className="hp-line hp-dim">or profits arising out of, or in</div>
+              <div className="hp-line hp-dim">connection with, the use of this</div>
+              <div className="hp-line hp-dim">website.</div>
+              <div className="hp-separator" />
+              <div className="hp-line hp-dim">Through this website you are able to</div>
+              <div className="hp-line hp-dim">link to other websites which are not</div>
+              <div className="hp-line hp-dim">under the control of Newsroom. We have</div>
+              <div className="hp-line hp-dim">no control over the nature, content</div>
+              <div className="hp-line hp-dim">and availability of those sites. The</div>
+              <div className="hp-line hp-dim">inclusion of any links does not</div>
+              <div className="hp-line hp-dim">necessarily imply a recommendation or</div>
+              <div className="hp-line hp-dim">endorse the views expressed within</div>
+              <div className="hp-line hp-dim">them.</div>
+              <div className="hp-separator" />
+              <div className="hp-line hp-dim">Every effort is made to keep the</div>
+              <div className="hp-line hp-dim">website up and running smoothly.</div>
+              <div className="hp-line hp-dim">However, Newsroom takes no</div>
+              <div className="hp-line hp-dim">responsibility for, and will not be</div>
+              <div className="hp-line hp-dim">liable for, the website being</div>
+              <div className="hp-line hp-dim">temporarily unavailable due to</div>
+              <div className="hp-line hp-dim">technical issues beyond our control.</div>
+              <div className="hp-separator" />
+              <div className="hp-line">COPYRIGHTS</div>
+              <div className="hp-separator" />
+              <div className="hp-line hp-dim">Unless otherwise stated all articles,</div>
+              <div className="hp-line hp-dim">text, and images are copyrighted by</div>
+              <div className="hp-line hp-dim">their respective owners. Newsroom does</div>
+              <div className="hp-line hp-dim">not claim ownership to any of these</div>
+              <div className="hp-line hp-dim">works. If you are the owner of any</div>
+              <div className="hp-line hp-dim">content displayed on this site and</div>
+              <div className="hp-line hp-dim">wish to have it removed, please</div>
+              <div className="hp-line hp-dim">contact{' '}
+                <a href="mailto:rsurmeier@risd.edu">rsurmeier@risd.edu</a>
+              </div>
+            </div>
+          </div>
+
         </div>
-        <span className="hp-feedback-label">v2</span>
+
       </div>
     </div>
   );

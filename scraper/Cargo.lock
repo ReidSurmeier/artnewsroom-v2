@@ -1479,6 +1479,7 @@ dependencies = [
  "feed-rs",
  "hex",
  "image",
+ "once_cell",
  "regex",
  "reqwest",
  "rusqlite",
