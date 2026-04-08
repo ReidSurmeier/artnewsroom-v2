@@ -1,0 +1,25 @@
+# Rust
+scraper/target/
+**/*.rs.bk
+
+# Node
+web/node_modules/
+web/.next/
+web/.env
+web/.env.local
+
+# Data
+data/*.db
+data/*.db-wal
+data/*.db-shm
+data/pdfs/
+data/images/
+
+# OS
+.DS_Store
+*.swp
+*.swo
+
+# IDE
+.vscode/
+.idea/

@@ -1,0 +1,24 @@
+[package]
+name = "newsroom"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "newsroom"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+reqwest = { version = "0.12", features = ["blocking", "json"] }
+feed-rs = "2"
+scraper = "0.22"
+rusqlite = { version = "0.33", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+url = "2"
+sha2 = "0.10"
+hex = "0.4"
+regex = "1"
+unicode-segmentation = "1"
+anyhow = "1"
